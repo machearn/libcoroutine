@@ -1,0 +1,7 @@
+ColumnLimit: 100
+PointerAlignment: Left
+SpaceBeforeCaseColon: false
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: false
+SpaceBeforeInheritanceColon: false
+AlwaysBreakTemplateDeclarations: Yes
