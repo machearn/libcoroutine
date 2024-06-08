@@ -41,7 +41,7 @@ public:
   FinalAwaiter final_suspend() noexcept { return {}; }
   void set_coroutine_handle(std::coroutine_handle<> handle) noexcept { _coroutine_handle = handle; }
 
-private:
+protected:
   std::coroutine_handle<> _coroutine_handle;
 };
 
