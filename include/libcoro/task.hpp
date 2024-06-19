@@ -24,7 +24,7 @@ public:
     template <typename Promise>
     std::coroutine_handle<> await_suspend(std::coroutine_handle<Promise> handle) noexcept {
       auto& promise = handle.promise();
-      if (promise._coroutine_handle != nullptr) {
+      if (promise._coroutine_handle) {
         return promise._coroutine_handle;
       } else {
         return std::noop_coroutine();
