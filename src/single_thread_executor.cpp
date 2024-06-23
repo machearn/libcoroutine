@@ -3,6 +3,11 @@
 #include <mutex>
 
 namespace libcoro {
+SingleThreadExecutor::SingleThreadExecutor()
+    : _execute_thread(&SingleThreadExecutor::background_thread, this) {}
+
+SingleThreadExecutor::~SingleThreadExecutor() { shutdown(); }
+
 void SingleThreadExecutor::resume(std::coroutine_handle<> handle) { execute(handle); }
 
 void SingleThreadExecutor::execute(std::coroutine_handle<> handle) {

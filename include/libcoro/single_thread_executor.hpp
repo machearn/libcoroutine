@@ -12,6 +12,11 @@ public:
   SingleThreadExecutor();
   ~SingleThreadExecutor();
 
+  SingleThreadExecutor(const SingleThreadExecutor&) = delete;
+  SingleThreadExecutor& operator=(const SingleThreadExecutor&) = delete;
+  SingleThreadExecutor(SingleThreadExecutor&&) = delete;
+  SingleThreadExecutor& operator=(SingleThreadExecutor&&) = delete;
+
   class Awaiter {
     friend class SingleThreadExecutor;
     explicit Awaiter(SingleThreadExecutor& executor) noexcept: _executor(executor) {}
@@ -26,7 +31,7 @@ public:
 
   private:
     SingleThreadExecutor& _executor;
-    std::coroutine_handle<> _handle;
+    std::coroutine_handle<> _handle{nullptr};
   };
 
   void shutdown();
@@ -38,12 +43,12 @@ private:
   void execute(std::coroutine_handle<> handle);
   void background_thread();
 
-  std::coroutine_handle<> _handle;
+  std::coroutine_handle<> _handle{nullptr};
   std::atomic<bool> _shutdown_requested{false};
 
   std::thread _execute_thread;
-  std::mutex _wait_mutex;
-  std::condition_variable _wait_cv;
+  std::mutex _wait_mutex{};
+  std::condition_variable _wait_cv{};
 };
 } // namespace libcoro
 
