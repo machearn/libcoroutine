@@ -11,6 +11,7 @@ template <typename type>
 concept executor = requires(type a, std::coroutine_handle<> handle) {
   { a.start() } -> awaiter;
   { a.resume(handle) } -> std::same_as<void>;
+  { a.shutdown() } -> std::same_as<void>;
 };
 }
 } // namespace libcoro
