@@ -18,7 +18,6 @@ enum class PollStatus { EVENT_READY, EVENT_TIMEOUT, EVENT_ERROR, EVENT_CLOSED };
 enum class PollType {
   READ = EVFILT_READ,
   WRITE = EVFILT_WRITE,
-  READ_WRITE = EVFILT_READ | EVFILT_WRITE
 };
 #elif __linux__
 // clang-format off
