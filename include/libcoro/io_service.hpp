@@ -54,10 +54,7 @@ public:
       bool expected = false;
       if (_io_service._scheduler_event_fd_triggered.compare_exchange_strong(
               expected, true, std::memory_order_release, std::memory_order_relaxed)) {
-#ifdef __APPLE__
         _io_service._scheduler_event_fd.trigger();
-#elif __linux__
-#endif
       }
     }
     void await_resume() noexcept {}
