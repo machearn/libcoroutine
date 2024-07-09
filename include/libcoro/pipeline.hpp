@@ -1,5 +1,5 @@
-#ifndef ALL_HPP
-#define ALL_HPP
+#ifndef PIPELINE_HPP
+#define PIPELINE_HPP
 
 #include "concepts/awaitable.hpp"
 
@@ -15,17 +15,17 @@
 
 namespace libcoro {
 namespace detail {
-class AllLatch {
+class PipelineLatch {
 public:
-  AllLatch(std::size_t count): _count(count + 1), _awaiting_coroutine(nullptr) {}
+  PipelineLatch(std::size_t count): _count(count + 1), _awaiting_coroutine(nullptr) {}
 
-  AllLatch(const AllLatch&) = delete;
-  AllLatch& operator=(const AllLatch&) = delete;
+  PipelineLatch(const PipelineLatch&) = delete;
+  PipelineLatch& operator=(const PipelineLatch&) = delete;
 
-  AllLatch(AllLatch&& other) noexcept
+  PipelineLatch(PipelineLatch&& other) noexcept
       : _count(other._count.exchange(0, std::memory_order_acq_rel)),
         _awaiting_coroutine(std::exchange(other._awaiting_coroutine, nullptr)) {}
-  AllLatch& operator=(AllLatch&& other) noexcept {
+  PipelineLatch& operator=(PipelineLatch&& other) noexcept {
     if (this != &other) {
       _count.store(other._count.exchange(0, std::memory_order_acq_rel), std::memory_order_release);
       _awaiting_coroutine = std::exchange(other._awaiting_coroutine, nullptr);
@@ -56,16 +56,16 @@ private:
 };
 
 template <typename T>
-class AllAwaitable;
+class PipelineAwaitable;
 
 template <typename T>
-class AllTask;
+class PipelineTask;
 
 template <>
-class AllAwaitable<std::tuple<>> {
+class PipelineAwaitable<std::tuple<>> {
 public:
-  constexpr AllAwaitable() noexcept = default;
-  explicit constexpr AllAwaitable(std::tuple<>) noexcept {}
+  constexpr PipelineAwaitable() noexcept = default;
+  explicit constexpr PipelineAwaitable(std::tuple<>) noexcept {}
 
   constexpr bool await_ready() const noexcept { return true; }
   constexpr void await_suspend(std::coroutine_handle<>) noexcept {}
@@ -73,10 +73,10 @@ public:
 };
 
 template <typename... Ts>
-class AllAwaitable<std::tuple<Ts...>> {
+class PipelineAwaitable<std::tuple<Ts...>> {
   class awaiter_base {
   public:
-    explicit awaiter_base(AllAwaitable& awaitable) noexcept: _awaitable(awaitable) {}
+    explicit awaiter_base(PipelineAwaitable& awaitable) noexcept: _awaitable(awaitable) {}
 
     bool await_ready() const noexcept { return _awaitable.is_ready(); }
 
@@ -85,24 +85,24 @@ class AllAwaitable<std::tuple<Ts...>> {
     }
 
   protected:
-    AllAwaitable& _awaitable;
+    PipelineAwaitable& _awaitable;
   };
 
 public:
-  explicit AllAwaitable(Ts&&... tasks) noexcept(
+  explicit PipelineAwaitable(Ts&&... tasks) noexcept(
       std::conjunction<std::is_nothrow_move_constructible<Ts>...>::value)
       : _latch(sizeof...(Ts)), _tasks(std::move<Ts>(tasks)...) {}
 
-  explicit AllAwaitable(std::tuple<Ts...>&& tasks) noexcept(
+  explicit PipelineAwaitable(std::tuple<Ts...>&& tasks) noexcept(
       std::is_nothrow_move_constructible_v<std::tuple<Ts...>>)
       : _latch(sizeof...(Ts)), _tasks(std::move(tasks)) {}
 
-  AllAwaitable(const AllAwaitable&) = delete;
-  AllAwaitable& operator=(const AllAwaitable&) = delete;
+  PipelineAwaitable(const PipelineAwaitable&) = delete;
+  PipelineAwaitable& operator=(const PipelineAwaitable&) = delete;
 
-  AllAwaitable(AllAwaitable&& other)
+  PipelineAwaitable(PipelineAwaitable&& other)
       : _latch(std::move(other._latch)), _tasks(std::move(other._tasks)) {}
-  AllAwaitable& operator=(AllAwaitable&&) = delete;
+  PipelineAwaitable& operator=(PipelineAwaitable&&) = delete;
 
   auto operator co_await() & noexcept {
     class awaiter: public awaiter_base {
@@ -130,14 +130,14 @@ private:
   }
 
   std::tuple<Ts...> _tasks;
-  AllLatch _latch;
+  PipelineLatch _latch;
 };
 
 template <typename T>
-class AllAwaitable {
+class PipelineAwaitable {
   class awaiter_base {
   public:
-    explicit awaiter_base(AllAwaitable& awaitable) noexcept: _awaitable(awaitable) {}
+    explicit awaiter_base(PipelineAwaitable& awaitable) noexcept: _awaitable(awaitable) {}
 
     bool await_ready() const noexcept { return _awaitable.is_ready(); }
 
@@ -146,19 +146,19 @@ class AllAwaitable {
     }
 
   protected:
-    AllAwaitable& _awaitable;
+    PipelineAwaitable& _awaitable;
   };
 
 public:
-  explicit AllAwaitable(T&& tasks) noexcept
+  explicit PipelineAwaitable(T&& tasks) noexcept
       : _latch(std::size(tasks)), _tasks(std::forward<T>(tasks)) {}
 
-  AllAwaitable(const AllAwaitable&) = delete;
-  AllAwaitable& operator=(const AllAwaitable&) = delete;
+  PipelineAwaitable(const PipelineAwaitable&) = delete;
+  PipelineAwaitable& operator=(const PipelineAwaitable&) = delete;
 
-  AllAwaitable(AllAwaitable&& other) noexcept(std::is_nothrow_move_constructible_v<T>)
+  PipelineAwaitable(PipelineAwaitable&& other) noexcept(std::is_nothrow_move_constructible_v<T>)
       : _latch(std::move(other._latch)), _tasks(std::move(other._tasks)) {}
-  AllAwaitable& operator=(AllAwaitable&&) = delete;
+  PipelineAwaitable& operator=(PipelineAwaitable&&) = delete;
 
   auto operator co_await() & noexcept {
     class awaiter: public awaiter_base {
@@ -188,13 +188,13 @@ private:
   }
 
   T _tasks;
-  AllLatch _latch;
+  PipelineLatch _latch;
 };
 template <typename T>
-class AllPromise {
+class PipelinePromise {
 public:
-  using coroutine_handle_type = std::coroutine_handle<AllPromise<T>>;
-  AllPromise() noexcept = default;
+  using coroutine_handle_type = std::coroutine_handle<PipelinePromise<T>>;
+  PipelinePromise() noexcept = default;
 
   auto get_return_object() noexcept { return coroutine_handle_type::from_promise(*this); }
 
@@ -219,7 +219,7 @@ public:
     return final_suspend();
   }
 
-  auto start(AllLatch& latch) noexcept {
+  auto start(PipelineLatch& latch) noexcept {
     _latch = &latch;
     coroutine_handle_type::from_promise(*this).resume();
   }
@@ -241,16 +241,16 @@ public:
   auto return_void() noexcept { assert(false); }
 
 private:
-  AllLatch* _latch{nullptr};
+  PipelineLatch* _latch{nullptr};
   std::exception_ptr _exception;
   std::add_pointer<T> _result{nullptr};
 };
 
 template <>
-class AllPromise<void> {
+class PipelinePromise<void> {
 public:
-  using coroutine_handle_type = std::coroutine_handle<AllPromise<void>>;
-  AllPromise() noexcept = default;
+  using coroutine_handle_type = std::coroutine_handle<PipelinePromise<void>>;
+  PipelinePromise() noexcept = default;
 
   auto get_return_object() noexcept { return coroutine_handle_type::from_promise(*this); }
 
@@ -278,37 +278,38 @@ public:
     }
   }
 
-  void start(AllLatch& latch) noexcept {
+  void start(PipelineLatch& latch) noexcept {
     _latch = &latch;
     coroutine_handle_type::from_promise(*this).resume();
   }
 
 private:
-  AllLatch* _latch{nullptr};
+  PipelineLatch* _latch{nullptr};
   std::exception_ptr _exception;
 };
 
 struct void_value {};
 
 template <typename T>
-class AllTask {
+class PipelineTask {
 public:
   template <typename TaskContainer>
   friend class AllAwaitable;
 
-  using promise_type = AllPromise<T>;
+  using promise_type = PipelinePromise<T>;
   using coroutine_handle_type = typename promise_type::coroutine_handle_type;
 
-  AllTask(coroutine_handle_type coroutine_handle) noexcept: _coroutine_handle(coroutine_handle) {}
+  PipelineTask(coroutine_handle_type coroutine_handle) noexcept
+      : _coroutine_handle(coroutine_handle) {}
 
-  AllTask(const AllTask&) = delete;
-  AllTask& operator=(const AllTask&) = delete;
+  PipelineTask(const PipelineTask&) = delete;
+  PipelineTask& operator=(const PipelineTask&) = delete;
 
-  AllTask(AllTask&& other) noexcept
+  PipelineTask(PipelineTask&& other) noexcept
       : _coroutine_handle(std::exchange(other._coroutine_handle, coroutine_handle_type{nullptr})) {}
-  AllTask& operator=(AllTask&&) = delete;
+  PipelineTask& operator=(PipelineTask&&) = delete;
 
-  ~AllTask() {
+  ~PipelineTask() {
     if (_coroutine_handle) {
       _coroutine_handle.destroy();
     }
@@ -342,16 +343,16 @@ public:
   }
 
 private:
-  void start(AllLatch& latch) noexcept { _coroutine_handle.promise().start(latch); }
+  void start(PipelineLatch& latch) noexcept { _coroutine_handle.promise().start(latch); }
   coroutine_handle_type _coroutine_handle;
 };
 
 template <concepts::awaitable awaitable_t,
           typename return_t = typename concepts::awaitable_traits<awaitable_t>::awaiter_return_t>
-static AllTask<return_t> make_all_task(awaitable_t awaitable);
+static PipelineTask<return_t> make_pipeline_task(awaitable_t awaitable);
 
 template <concepts::awaitable awaitable_t, typename return_t>
-static AllTask<return_t> make_all_task(awaitable_t awaitable) {
+static PipelineTask<return_t> make_pipeline_task(awaitable_t awaitable) {
   if constexpr (std::is_void_v<return_t>) {
     co_await static_cast<awaitable_t&&>(awaitable);
     co_return;
@@ -362,27 +363,27 @@ static AllTask<return_t> make_all_task(awaitable_t awaitable) {
 } // namespace detail
 
 template <concepts::awaitable... awaitables_t>
-[[nodiscard]] auto all(awaitables_t... awaitables) {
-  return detail::AllAwaitable<std::tuple<
-      detail::AllTask<typename concepts::awaitable_traits<awaitables_t>::awaiter_return_t>...>>(
-      std::make_tuple(detail::make_all_task(std::move(awaitables))...));
+[[nodiscard]] auto pipeline(awaitables_t... awaitables) {
+  return detail::PipelineAwaitable<std::tuple<detail::PipelineTask<
+      typename concepts::awaitable_traits<awaitables_t>::awaiter_return_t>...>>(
+      std::make_tuple(detail::make_pipeline_task(std::move(awaitables))...));
 }
 
 template <std::ranges::range range_t,
           concepts::awaitable awaitable_t = typename std::ranges::range_value_t<range_t>,
           typename return_t = typename concepts::awaitable_traits<awaitable_t>::awaiter_return_t>
-[[nodiscard]] auto all(range_t&& awaitables) {
-  std::vector<detail::AllTask<return_t>> tasks;
+[[nodiscard]] auto pipeline(range_t&& awaitables) {
+  std::vector<detail::PipelineTask<return_t>> tasks;
   if constexpr (std::ranges::sized_range<range_t>) {
     tasks.reserve(std::ranges::size(awaitables));
   }
 
   for (auto&& a : awaitables) {
-    tasks.emplace_back(detail::make_all_task(std::move(a)));
+    tasks.emplace_back(detail::make_pipeline_task(std::move(a)));
   }
 
-  return detail::AllAwaitable<std::vector<detail::AllTask<return_t>>>(std::move(tasks));
+  return detail::PipelineAwaitable<std::vector<detail::PipelineTask<return_t>>>(std::move(tasks));
 }
 } // namespace libcoro
 
-#endif // !ALL_HPP
+#endif // !PIPELINE_HPP
